@@ -12,7 +12,8 @@
     "start": "node server.js",
     "host": "npm run build && node server.js",
     "sync-notes": "node scripts/sync-notes.mjs",
-    "migrate-live-data": "node scripts/migrate-live-data.mjs"
+    "migrate-live-data": "node scripts/migrate-live-data.mjs",
+    "publish-notes": "bash scripts/publish-notes.sh"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

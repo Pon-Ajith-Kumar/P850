@@ -4,19 +4,14 @@ Private GATE study portal built with React, Vite, and a small Node.js API.
 
 ## Notes and images
 
-The fixed local notes source is `/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes`. Before publishing an update, run `npm run sync-notes`. The script recursively copies supported image files into `notes/`, including new subject folders and nested topic folders. It adds new paths, replaces changed files at the same path, and deliberately does not remove files missing from the source. It prints added/replaced/unchanged totals.
+The fixed local notes source is `/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes`. The `npm run publish-notes` command is the unified update workflow. It recursively copies supported images into `notes/`, rebuilds subject metadata and the site, commits only the notes and generated subject data, then pushes `main` to GitHub. It handles new subject folders and nested topic folders, replaces changed files at the same path, and deliberately keeps repo files missing from the source. It prints added/replaced/unchanged totals.
 
 To use a different source location, set `P850_SOURCE_NOTES` for that command.
 
-Then review and publish the repo changes:
+To run the full update:
 
 ```sh
-npm run sync-notes
-npm run build
-git status --short
-git add notes src/data/subjects.json
-git commit -m "Update revision notes"
-git push origin main
+npm run publish-notes
 ```
 
 Render redeploys the website from the pushed GitHub commit. Images stay versioned in Git; they are not written to Render's ephemeral filesystem.
