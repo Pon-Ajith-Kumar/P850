@@ -8,6 +8,8 @@ const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
 const GENERATE_SCRIPT = path.resolve(process.cwd(), 'scripts/generate-subjects.mjs')
 const WATCH_DEBOUNCE_MS = 350
 const POLL_INTERVAL_MS = 1500
+const AUTO_PUSH_NOTES = process.env.P850_AUTO_PUSH_NOTES !== '0'
+const AUTO_PUSH_MESSAGE = process.env.P850_COMMIT_MESSAGE || 'Auto-refresh notes update'
 
 let timer = null
 let pollTimer = null
@@ -41,6 +43,58 @@ function runGenerator() {
   })
 }
 
+function runGitCommand(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, {
+      cwd: process.cwd(),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString()
+    })
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout.trim())
+        return
+      }
+
+      reject(new Error(stderr.trim() || `git ${args.join(' ')} exited with code ${code}`))
+    })
+
+    child.on('error', reject)
+  })
+}
+
+async function maybeAutoCommitAndPush() {
+  if (!AUTO_PUSH_NOTES) {
+    return
+  }
+
+  try {
+    const statusOutput = await runGitCommand(['status', '--porcelain', '--', 'notes', 'src/data/subjects.json', 'public/notes'])
+    if (!statusOutput.trim()) {
+      log('No relevant notes changes detected; skipping auto-commit.')
+      return
+    }
+
+    await runGitCommand(['add', '--', 'notes', 'src/data/subjects.json', 'public/notes'])
+    await runGitCommand(['commit', '-m', AUTO_PUSH_MESSAGE])
+    await runGitCommand(['push', 'origin', 'main'])
+    log('Auto-committed and pushed notes refresh to GitHub.')
+  } catch (error) {
+    console.warn('[watch-notes] Automatic git push skipped:', error.message)
+  }
+}
+
 function scheduleRefresh() {
   if (timer) clearTimeout(timer)
 
@@ -49,6 +103,7 @@ function scheduleRefresh() {
 
     try {
       await runGenerator()
+      await maybeAutoCommitAndPush()
     } catch (error) {
       console.error('[watch-notes] Regeneration failed:', error)
     }
