@@ -1,4 +1,21 @@
+import fs from 'node:fs'
 import { Pool } from 'pg'
+
+function loadDotEnvFile() {
+  const envPath = new URL('../.env', import.meta.url)
+  if (!fs.existsSync(envPath)) return
+
+  for (const rawLine of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#') || !line.includes('=')) continue
+    const separatorIndex = line.indexOf('=')
+    const key = line.slice(0, separatorIndex).trim()
+    if (!key || String(process.env[key] || '').trim()) continue
+    process.env[key] = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '')
+  }
+}
+
+loadDotEnvFile()
 
 const LIVE_APP_URL = (process.env.P850_LIVE_APP_URL || 'https://p850.onrender.com').replace(/\/$/, '')
 const databaseUrl = String(process.env.DATABASE_URL || '').trim()

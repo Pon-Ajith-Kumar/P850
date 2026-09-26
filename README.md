@@ -30,4 +30,4 @@ Before switching the live service to this version, export existing records from 
 2. Copy .env.example to .env and set the access values.
 3. Run npm run dev.
 
-To use PostgreSQL locally, set DATABASE_URL in .env. Without it, the server uses the local JSON files.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the one-time database setup and safe redeploy checklist. The migration script reads DATABASE_URL from an ignored local .env file. To use PostgreSQL locally, set DATABASE_URL in .env. Without it, the server uses the local JSON files.
