@@ -8,7 +8,7 @@ const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
 const GENERATE_SCRIPT = path.resolve(process.cwd(), 'scripts/generate-subjects.mjs')
 const WATCH_DEBOUNCE_MS = 350
 const POLL_INTERVAL_MS = 1500
-const AUTO_PUSH_NOTES = process.env.P850_AUTO_PUSH_NOTES !== '0'
+const AUTO_PUSH_NOTES = process.env.P850_AUTO_PUSH_NOTES === '1'
 const AUTO_PUSH_MESSAGE = process.env.P850_COMMIT_MESSAGE || 'Auto-refresh notes update'
 
 let timer = null
@@ -91,7 +91,7 @@ async function maybeAutoCommitAndPush() {
     await runGitCommand(['push', 'origin', 'main'])
     log('Auto-committed and pushed notes refresh to GitHub.')
   } catch (error) {
-    console.warn('[watch-notes] Automatic git push skipped:', error.message)
+    console.warn('[watch-notes] Automatic git push skipped: this is manual-by-default. Set P850_AUTO_PUSH_NOTES=1 to enable it.', error.message)
   }
 }
 
