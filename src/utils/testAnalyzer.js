@@ -111,24 +111,15 @@ export function calculatePerformance(obtained, total) {
 }
 
 export async function fetchTestEntriesFromApi() {
-  if (typeof fetch !== 'function') {
-    return getTestEntries()
-  }
+  if (typeof fetch !== 'function') return getTestEntries()
 
-  try {
-    const response = await fetch(TEST_ANALYZER_API, { cache: 'no-store' })
-    if (!response.ok) {
-      throw new Error(`API fetch failed with ${response.status}`)
-    }
+  const response = await fetch(TEST_ANALYZER_API, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Could not load saved test results.')
 
-    const payload = await response.json()
-    const entries = Array.isArray(payload) ? payload : []
-    const normalized = entries.map((entry) => normalizeTestEntry(entry))
-    safeWrite(TEST_ANALYZER_KEY, normalized)
-    return normalized
-  } catch {
-    return getTestEntries()
-  }
+  const payload = await response.json()
+  const entries = Array.isArray(payload) ? payload.map((entry) => normalizeTestEntry(entry)) : []
+  safeWrite(TEST_ANALYZER_KEY, entries)
+  return entries
 }
 
 export function getTestEntries() {
@@ -142,81 +133,58 @@ export function saveTestEntries(entries) {
 
 export async function addTestEntry(entry) {
   const normalized = normalizeTestEntry(entry)
-
-  if (typeof fetch === 'function') {
-    try {
-      const response = await fetch(TEST_ANALYZER_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(normalized),
-      })
-
-      if (response.ok) {
-        const payload = await response.json()
-        const nextEntries = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : [normalized]
-        saveTestEntries(nextEntries)
-        return nextEntries
-      }
-    } catch {
-      // fallback to local storage below
-    }
+  if (typeof fetch !== 'function') {
+    const nextEntries = [...getTestEntries(), normalized]
+    saveTestEntries(nextEntries)
+    return nextEntries
   }
 
-  const nextEntries = [...getTestEntries(), normalized]
+  const response = await fetch(TEST_ANALYZER_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(normalized),
+  })
+  if (!response.ok) throw new Error('Could not save the test result.')
+  const payload = await response.json()
+  const nextEntries = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : [...getTestEntries(), normalized]
   saveTestEntries(nextEntries)
   return nextEntries
 }
 
 export async function updateTestEntry(id, updates) {
-  const baseEntries = getTestEntries()
-  const nextEntries = baseEntries.map((entry) => {
-    if (entry.id !== id) return entry
-    return normalizeTestEntry({ ...entry, ...updates })
-  })
-
-  if (typeof fetch === 'function') {
-    try {
-      const response = await fetch(`${TEST_ANALYZER_API}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nextEntries.find((entry) => entry.id === id) || {}),
-      })
-
-      if (response.ok) {
-        const payload = await response.json()
-        const normalized = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : nextEntries
-        saveTestEntries(normalized)
-        return normalized
-      }
-    } catch {
-      // fallback to local storage below
-    }
+  const currentEntries = getTestEntries()
+  const nextEntries = currentEntries.map((entry) => entry.id === id ? normalizeTestEntry({ ...entry, ...updates }) : entry)
+  if (typeof fetch !== 'function') {
+    saveTestEntries(nextEntries)
+    return nextEntries
   }
 
-  saveTestEntries(nextEntries)
-  return nextEntries
+  const response = await fetch(TEST_ANALYZER_API + '/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
+  if (!response.ok) throw new Error('Could not update the test result.')
+  const payload = await response.json()
+  const savedEntries = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : nextEntries
+  saveTestEntries(savedEntries)
+  return savedEntries
 }
 
 export async function deleteTestEntry(id) {
   const currentEntries = getTestEntries()
   const nextEntries = currentEntries.filter((entry) => entry.id !== id)
-
-  if (typeof fetch === 'function') {
-    try {
-      const response = await fetch(`${TEST_ANALYZER_API}/${id}`, { method: 'DELETE' })
-      if (response.ok) {
-        const payload = await response.json()
-        const normalized = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : nextEntries
-        saveTestEntries(normalized)
-        return normalized
-      }
-    } catch {
-      // fallback to local storage below
-    }
+  if (typeof fetch !== 'function') {
+    saveTestEntries(nextEntries)
+    return nextEntries
   }
 
-  saveTestEntries(nextEntries)
-  return nextEntries
+  const response = await fetch(TEST_ANALYZER_API + '/' + encodeURIComponent(id), { method: 'DELETE' })
+  if (!response.ok) throw new Error('Could not delete the test result.')
+  const payload = await response.json()
+  const savedEntries = Array.isArray(payload) ? payload.map((item) => normalizeTestEntry(item)) : nextEntries
+  saveTestEntries(savedEntries)
+  return savedEntries
 }
 
 export function sortTestEntries(entries) {

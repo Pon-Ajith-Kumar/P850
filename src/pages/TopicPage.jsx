@@ -16,6 +16,7 @@ function TopicPage() {
   const sortedImages = useMemo(() => sortNoteImages(topic?.images ?? []), [topic])
   const [currentPage, setCurrentPage] = useState(0)
   const [bookmark, setBookmark] = useState(null)
+  const [bookmarkError, setBookmarkError] = useState('')
   const hasInitializedResume = useRef(false)
   const pageCount = sortedImages.length
   const currentImage = useMemo(() => sortedImages[currentPage] ?? '', [sortedImages, currentPage])
@@ -150,23 +151,30 @@ function TopicPage() {
         <button
           type="button"
           aria-label="Bookmark note"
-          onClick={() => {
+          onClick={async () => {
             if (!subject || !topic) return
-            const result = toggleBookmark({
-              subjectId: subject.id,
-              topicId: topic.id,
-              subjectName: subject.name,
-              topicName: topic.name,
-              page: currentPage,
-              imageUrl: currentImage,
-            })
-            setBookmark(result.bookmark)
+            try {
+              const result = await toggleBookmark({
+                subjectId: subject.id,
+                topicId: topic.id,
+                subjectName: subject.name,
+                topicName: topic.name,
+                page: currentPage,
+                imageUrl: currentImage,
+              })
+              setBookmark(result.bookmark)
+              setBookmarkError('')
+            } catch (error) {
+              setBookmarkError(error.message || 'Could not save the bookmark.')
+            }
           }}
           className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border shadow-sm transition ${bookmark ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'}`}
         >
           <Bookmark size={18} />
         </button>
       </div>
+
+      {bookmarkError ? <p className="text-sm text-red-600 dark:text-red-400">{bookmarkError}</p> : null}
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-4 flex items-center justify-between gap-3">

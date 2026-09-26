@@ -93,40 +93,34 @@ export function saveResumeState(subjectId, topicId, currentPage, totalPages = 0)
 }
 
 export async function fetchBookmarksFromApi() {
-  if (typeof fetch !== 'function') {
-    return getBookmarks()
-  }
+  if (typeof fetch !== 'function') return getBookmarks()
 
-  try {
-    const response = await fetch(BOOKMARKS_API, { cache: 'no-store' })
-    if (!response.ok) {
-      throw new Error(`Bookmarks API failed with ${response.status}`)
-    }
-
-    const payload = await response.json()
-    const nextBookmarks = Array.isArray(payload) ? payload : []
-    safeWrite(BOOKMARK_KEY, nextBookmarks)
-    return nextBookmarks
-  } catch {
-    return getBookmarks()
-  }
+  const response = await fetch(BOOKMARKS_API, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Could not load saved bookmarks.')
+  const payload = await response.json()
+  const nextBookmarks = Array.isArray(payload) ? payload : []
+  safeWrite(BOOKMARK_KEY, nextBookmarks)
+  return nextBookmarks
 }
 
 export function getBookmarks() {
   return safeRead(BOOKMARK_KEY, [])
 }
 
-export function toggleBookmark({ subjectId, topicId, subjectName, topicName, page, imageUrl }) {
+export async function toggleBookmark({ subjectId, topicId, subjectName, topicName, page, imageUrl }) {
   const safePage = Number.isInteger(page) ? Math.max(0, page) : 0
-  const bookmarkId = `${subjectId}::${topicId}::${safePage}`
+  const bookmarkId = subjectId + '::' + topicId + '::' + safePage
   const existing = getBookmarks()
   const currentBookmark = existing.find((item) => item.id === bookmarkId)
 
   if (currentBookmark) {
-    const nextBookmarks = existing.filter((item) => item.id !== bookmarkId)
-    safeWrite(BOOKMARK_KEY, nextBookmarks)
     if (typeof fetch === 'function') {
-      fetch(`${BOOKMARKS_API}/${bookmarkId}`, { method: 'DELETE' }).catch(() => undefined)
+      const response = await fetch(BOOKMARKS_API + '/' + encodeURIComponent(bookmarkId), { method: 'DELETE' })
+      if (!response.ok) throw new Error('Could not remove the bookmark.')
+      const payload = await response.json()
+      safeWrite(BOOKMARK_KEY, Array.isArray(payload) ? payload : existing.filter((item) => item.id !== bookmarkId))
+    } else {
+      safeWrite(BOOKMARK_KEY, existing.filter((item) => item.id !== bookmarkId))
     }
     return { bookmark: null, removed: true }
   }
@@ -142,16 +136,21 @@ export function toggleBookmark({ subjectId, topicId, subjectName, topicName, pag
     updatedAt: Date.now(),
   }
 
-  const nextBookmarks = [entry, ...existing]
-  safeWrite(BOOKMARK_KEY, nextBookmarks)
-  if (typeof fetch === 'function') {
-    fetch(BOOKMARKS_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    }).catch(() => undefined)
+  if (typeof fetch !== 'function') {
+    safeWrite(BOOKMARK_KEY, [entry, ...existing])
+    return { bookmark: entry, removed: false }
   }
-  return { bookmark: entry, removed: false }
+
+  const response = await fetch(BOOKMARKS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  })
+  if (!response.ok) throw new Error('Could not save the bookmark.')
+  const payload = await response.json()
+  const nextBookmarks = Array.isArray(payload) ? payload : [entry, ...existing]
+  safeWrite(BOOKMARK_KEY, nextBookmarks)
+  return { bookmark: nextBookmarks.find((item) => item.id === bookmarkId) || entry, removed: false }
 }
 
 export function removeBookmark(subjectId, topicId) {

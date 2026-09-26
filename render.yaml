@@ -17,6 +17,8 @@ services:
         value: 10000
       - key: P850_NOTES_ROOT
         value: ./notes
+      - key: DATABASE_URL
+        sync: false
       - key: P850_ACCESS_CODE
         sync: false
       - key: P850_ACCESS_PIN

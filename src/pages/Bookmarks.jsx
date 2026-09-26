@@ -6,15 +6,21 @@ import { fetchBookmarksFromApi, getBookmarks } from '../utils/progress'
 
 function Bookmarks() {
   const [bookmarks, setBookmarks] = useState([])
+  const [error, setError] = useState('')
   const bookmarkPreviewMap = new Map()
 
   useEffect(() => {
     let isMounted = true
 
     const syncBookmarks = async () => {
-      const nextBookmarks = await fetchBookmarksFromApi()
-      if (isMounted) {
-        setBookmarks(nextBookmarks)
+      try {
+        const nextBookmarks = await fetchBookmarksFromApi()
+        if (isMounted) {
+          setBookmarks(nextBookmarks)
+          setError('')
+        }
+      } catch (loadError) {
+        if (isMounted) setError(loadError.message || 'Could not load saved bookmarks.')
       }
     }
 
@@ -25,6 +31,7 @@ function Bookmarks() {
       onData: (nextBookmarks) => {
         if (isMounted) {
           setBookmarks(nextBookmarks)
+          setError('')
         }
       },
       intervalMs: 4000,
@@ -74,6 +81,8 @@ function Bookmarks() {
           {orderedBookmarks.length}
         </span>
       </div>
+
+      {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
       {orderedBookmarks.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">

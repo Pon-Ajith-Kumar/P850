@@ -3,13 +3,36 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
+import { checkPersistence, deleteRecord, initializePersistence, insertRecord, listRecords, updateRecord } from './server/persistence.js'
 
 const ROOT_DIR = process.cwd()
 const DIST_DIR = path.join(ROOT_DIR, 'dist')
-const DATA_DIR = path.join(ROOT_DIR, 'data')
-const TEST_ENTRIES_FILE = path.join(DATA_DIR, 'test-entries.json')
-const BOOKMARKS_FILE = path.join(DATA_DIR, 'bookmarks.json')
-const MISTAKES_FILE = path.join(DATA_DIR, 'mistakes.json')
+function loadDotEnvFile() {
+  const envPath = path.join(ROOT_DIR, '.env')
+  if (!fs.existsSync(envPath)) {
+    return
+  }
+
+  for (const rawLine of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#') || !line.includes('=')) {
+      continue
+    }
+
+    const separatorIndex = line.indexOf('=')
+    const key = line.slice(0, separatorIndex).trim()
+    const existingValue = process.env[key]
+    if (!key || (Object.prototype.hasOwnProperty.call(process.env, key) && String(existingValue || '').trim())) {
+      continue
+    }
+
+    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '')
+    process.env[key] = value
+  }
+}
+
+loadDotEnvFile()
+
 const NOTES_ROOT = process.env.P850_NOTES_ROOT
   ? path.resolve(process.env.P850_NOTES_ROOT)
   : path.join(ROOT_DIR, 'notes')
@@ -17,57 +40,6 @@ const PORT = Number(process.env.PORT || 3000)
 const HOST = process.env.HOST || '0.0.0.0'
 const ACCESS_CODE = String(process.env.P850_ACCESS_CODE || '').trim()
 const ACCESS_PIN = String(process.env.P850_ACCESS_PIN || '').trim()
-
-function ensureDataFile() {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
-  if (!fs.existsSync(TEST_ENTRIES_FILE)) {
-    fs.writeFileSync(TEST_ENTRIES_FILE, '[]\n', 'utf8')
-  }
-  if (!fs.existsSync(BOOKMARKS_FILE)) {
-    fs.writeFileSync(BOOKMARKS_FILE, '[]\n', 'utf8')
-  }
-  if (!fs.existsSync(MISTAKES_FILE)) {
-    fs.writeFileSync(MISTAKES_FILE, '[]\n', 'utf8')
-  }
-}
-
-function readJsonArray(filePath) {
-  try {
-    const raw = fs.readFileSync(filePath, 'utf8')
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function writeJsonArray(filePath, entries) {
-  fs.writeFileSync(filePath, `${JSON.stringify(entries, null, 2)}\n`, 'utf8')
-}
-
-function readEntries() {
-  return readJsonArray(TEST_ENTRIES_FILE)
-}
-
-function writeEntries(entries) {
-  writeJsonArray(TEST_ENTRIES_FILE, entries)
-}
-
-function readBookmarks() {
-  return readJsonArray(BOOKMARKS_FILE)
-}
-
-function writeBookmarks(entries) {
-  writeJsonArray(BOOKMARKS_FILE, entries)
-}
-
-function readMistakes() {
-  return readJsonArray(MISTAKES_FILE)
-}
-
-function writeMistakes(entries) {
-  writeJsonArray(MISTAKES_FILE, entries)
-}
 
 function startNotesWatcher() {
   try {
@@ -156,6 +128,7 @@ function parseJsonBody(req) {
 
 async function handleApi(req, res, pathname) {
   if (pathname === '/api/health') {
+    await checkPersistence()
     sendJson(res, 200, { ok: true, status: 'healthy' })
     return
   }
@@ -171,55 +144,49 @@ async function handleApi(req, res, pathname) {
   }
 
   if (pathname === '/api/test-entries' && req.method === 'GET') {
-    sendJson(res, 200, readEntries())
+    sendJson(res, 200, await listRecords('test-entries'))
     return
   }
 
   if (pathname === '/api/test-entries' && req.method === 'POST') {
     try {
       const parsed = await parseJsonBody(req)
-      const entries = readEntries()
-      const nextEntries = [...entries, parsed]
-      writeEntries(nextEntries)
+      const nextEntries = await insertRecord('test-entries', parsed)
       sendJson(res, 200, nextEntries)
     } catch (error) {
-      sendJson(res, 400, { message: error.message || 'Bad request' })
+      sendJson(res, error.code ? 503 : 400, { message: error.code ? 'Data store unavailable.' : error.message || 'Bad request' })
     }
     return
   }
 
   if (pathname === '/api/bookmarks' && req.method === 'GET') {
-    sendJson(res, 200, readBookmarks())
+    sendJson(res, 200, await listRecords('bookmarks'))
     return
   }
 
   if (pathname === '/api/bookmarks' && req.method === 'POST') {
     try {
       const parsed = await parseJsonBody(req)
-      const entries = readBookmarks()
-      const nextEntries = [parsed, ...entries.filter((entry) => entry.id !== parsed.id)]
-      writeBookmarks(nextEntries)
+      const nextEntries = await insertRecord('bookmarks', parsed, { upsert: true })
       sendJson(res, 200, nextEntries)
     } catch (error) {
-      sendJson(res, 400, { message: error.message || 'Bad request' })
+      sendJson(res, error.code ? 503 : 400, { message: error.code ? 'Data store unavailable.' : error.message || 'Bad request' })
     }
     return
   }
 
   if (pathname === '/api/mistakes' && req.method === 'GET') {
-    sendJson(res, 200, readMistakes())
+    sendJson(res, 200, await listRecords('mistakes'))
     return
   }
 
   if (pathname === '/api/mistakes' && req.method === 'POST') {
     try {
       const parsed = await parseJsonBody(req)
-      const entries = readMistakes()
-      const nextEntries = [parsed, ...entries.filter((entry) => entry.id !== parsed.id)]
-      writeMistakes(nextEntries)
+      const nextEntries = await insertRecord('mistakes', parsed, { upsert: true })
       sendJson(res, 200, nextEntries)
     } catch (error) {
-      sendJson(res, 400, { message: error.message || 'Bad request' })
+      sendJson(res, error.code ? 503 : 400, { message: error.code ? 'Data store unavailable.' : error.message || 'Bad request' })
     }
     return
   }
@@ -229,8 +196,7 @@ async function handleApi(req, res, pathname) {
     const bookmarkId = decodeURIComponent(bookmarkMatch[1])
 
     if (req.method === 'DELETE') {
-      const entries = readBookmarks().filter((entry) => entry.id !== bookmarkId)
-      writeBookmarks(entries)
+      const entries = await deleteRecord('bookmarks', bookmarkId)
       sendJson(res, 200, entries)
       return
     }
@@ -241,8 +207,7 @@ async function handleApi(req, res, pathname) {
     const mistakeId = decodeURIComponent(mistakeMatch[1])
 
     if (req.method === 'DELETE') {
-      const entries = readMistakes().filter((entry) => entry.id !== mistakeId)
-      writeMistakes(entries)
+      const entries = await deleteRecord('mistakes', mistakeId)
       sendJson(res, 200, entries)
       return
     }
@@ -255,18 +220,16 @@ async function handleApi(req, res, pathname) {
     if (req.method === 'PUT') {
       try {
         const parsed = await parseJsonBody(req)
-        const entries = readEntries().map((entry) => (entry.id === entryId ? { ...entry, ...parsed } : entry))
-        writeEntries(entries)
+        const entries = await updateRecord('test-entries', entryId, parsed)
         sendJson(res, 200, entries)
       } catch (error) {
-        sendJson(res, 400, { message: error.message || 'Bad request' })
+        sendJson(res, error.code ? 503 : 400, { message: error.code ? 'Data store unavailable.' : error.message || 'Bad request' })
       }
       return
     }
 
     if (req.method === 'DELETE') {
-      const entries = readEntries().filter((entry) => entry.id !== entryId)
-      writeEntries(entries)
+      const entries = await deleteRecord('test-entries', entryId)
       sendJson(res, 200, entries)
       return
     }
@@ -314,7 +277,12 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname
 
   if (pathname.startsWith('/api/')) {
-    await handleApi(req, res, pathname)
+    try {
+      await handleApi(req, res, pathname)
+    } catch (error) {
+      console.error('[server] API request failed:', error)
+      if (!res.headersSent) sendJson(res, 503, { message: 'Data store unavailable.' })
+    }
     return
   }
 
@@ -331,7 +299,7 @@ const server = http.createServer(async (req, res) => {
 })
 
 async function main() {
-  ensureDataFile()
+  await initializePersistence()
 
   if (!fs.existsSync(NOTES_ROOT)) {
     console.warn(`[server] Notes root not found at ${NOTES_ROOT}. The app may show empty subject data until that folder is available.`)

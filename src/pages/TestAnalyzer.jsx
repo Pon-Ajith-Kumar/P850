@@ -98,11 +98,14 @@ function TestAnalyzer() {
 
   useEffect(() => {
     const loadEntries = async () => {
-      const nextEntries = await fetchTestEntriesFromApi()
-      setEntries(nextEntries)
+      try {
+        const nextEntries = await fetchTestEntriesFromApi()
+        setEntries(nextEntries)
+        setError('')
+      } catch (loadError) {
+        setError(loadError.message || 'Could not load saved test results.')
+      }
     }
-
-    loadEntries()
 
     const stopPolling = startLivePolling({
       fetcher: fetchTestEntriesFromApi,
@@ -135,7 +138,6 @@ function TestAnalyzer() {
 
     const obtained = Number(form.obtained)
     const total = Number(form.total)
-
     if (!Number.isFinite(obtained) || !Number.isFinite(total) || total <= 0) {
       setError('Enter valid marks and total marks.')
       return
@@ -143,10 +145,7 @@ function TestAnalyzer() {
 
     const normalized = normalizeTestEntry({
       ...form,
-      subject:
-        form.category === 'dpp' || form.category === 'test-series'
-          ? form.subject || 'Combined Subjects'
-          : '',
+      subject: form.category === 'dpp' || form.category === 'test-series' ? form.subject || 'Combined Subjects' : '',
       obtained,
       total,
       date: form.date,
@@ -154,18 +153,31 @@ function TestAnalyzer() {
       createdAt: Date.now(),
     })
 
-    const nextEntries = await addTestEntry(normalized)
-    setEntries(nextEntries)
-    resetForm()
+    try {
+      const nextEntries = await addTestEntry(normalized)
+      setEntries(nextEntries)
+      resetForm()
+    } catch (saveError) {
+      setError(saveError.message || 'Could not save the test result.')
+    }
   }
 
   const handleDelete = async (id) => {
-    setEntries(await deleteTestEntry(id))
+    try {
+      setEntries(await deleteTestEntry(id))
+      setError('')
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete the test result.')
+    }
   }
 
   const handleUpdate = async (id, field, value) => {
-    const nextEntries = await updateTestEntry(id, { [field]: value })
-    setEntries(nextEntries)
+    try {
+      setEntries(await updateTestEntry(id, { [field]: value }))
+      setError('')
+    } catch (updateError) {
+      setError(updateError.message || 'Could not update the test result.')
+    }
   }
 
   const resetForm = () => {

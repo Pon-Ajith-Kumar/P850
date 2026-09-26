@@ -2,6 +2,32 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 
+function loadDotEnvFile() {
+  const envPath = path.resolve(process.cwd(), '.env')
+  if (!fs.existsSync(envPath)) {
+    return
+  }
+
+  for (const rawLine of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#') || !line.includes('=')) {
+      continue
+    }
+
+    const separatorIndex = line.indexOf('=')
+    const key = line.slice(0, separatorIndex).trim()
+    const existingValue = process.env[key]
+    if (!key || (Object.prototype.hasOwnProperty.call(process.env, key) && String(existingValue || '').trim())) {
+      continue
+    }
+
+    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '')
+    process.env[key] = value
+  }
+}
+
+loadDotEnvFile()
+
 const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
   ? path.resolve(process.env.P850_NOTES_ROOT)
   : path.resolve(process.cwd(), 'notes')

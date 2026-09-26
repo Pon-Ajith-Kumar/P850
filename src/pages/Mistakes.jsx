@@ -20,16 +20,17 @@ function Mistakes() {
     let isMounted = true
 
     const syncMistakes = async () => {
-      const nextEntries = await fetchMistakesFromApi()
-      if (!isMounted) return
-      const grouped = {}
-      for (const subject of subjects) {
-        grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
+      try {
+        const nextEntries = await fetchMistakesFromApi()
+        if (!isMounted) return
+        const grouped = {}
+        for (const subject of subjects) grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
+        setMistakesBySubject(grouped)
+        setError('')
+      } catch (loadError) {
+        if (isMounted) setError(loadError.message || 'Could not load saved mistakes.')
       }
-      setMistakesBySubject(grouped)
     }
-
-    syncMistakes()
 
     const stopPolling = startLivePolling({
       fetcher: fetchMistakesFromApi,
@@ -53,35 +54,43 @@ function Mistakes() {
 
   const recentMistakes = useMemo(() => getMistakes().slice(0, 5), [])
 
-  const handleAddMistake = (event) => {
+  const handleAddMistake = async (event) => {
     event.preventDefault()
     const subject = subjects.find((item) => item.id === form.subjectId)
-    const nextEntry = addMistake({
-      subjectId: subject?.id || form.subjectId,
-      subjectName: subject?.name || 'Unknown Subject',
-      text: form.text,
-    })
 
-    if (!nextEntry) {
-      setError('Type a mistake before saving.')
-      return
+    try {
+      const nextEntry = await addMistake({
+        subjectId: subject?.id || form.subjectId,
+        subjectName: subject?.name || 'Unknown Subject',
+        text: form.text,
+      })
+
+      if (!nextEntry) {
+        setError('Type a mistake before saving.')
+        return
+      }
+
+      setForm(defaultFormState)
+      setError('')
+      setMistakesBySubject((prev) => ({
+        ...prev,
+        [subject?.id || form.subjectId]: [nextEntry, ...(prev[subject?.id || form.subjectId] || [])],
+      }))
+    } catch (saveError) {
+      setError(saveError.message || 'Could not save the mistake.')
     }
-
-    setForm(defaultFormState)
-    setError('')
-    setMistakesBySubject((prev) => ({
-      ...prev,
-      [subject?.id || form.subjectId]: [nextEntry, ...(prev[subject?.id || form.subjectId] || [])],
-    }))
   }
 
-  const handleDelete = (subjectId, mistakeId) => {
-    const nextEntries = deleteMistake(mistakeId)
-    const grouped = {}
-    for (const subject of subjects) {
-      grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
+  const handleDelete = async (subjectId, mistakeId) => {
+    try {
+      const nextEntries = await deleteMistake(mistakeId)
+      const grouped = {}
+      for (const subject of subjects) grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
+      setMistakesBySubject(grouped)
+      setError('')
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete the mistake.')
     }
-    setMistakesBySubject(grouped)
   }
 
   return (

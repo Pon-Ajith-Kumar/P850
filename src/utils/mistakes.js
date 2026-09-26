@@ -3,19 +3,18 @@ const MISTAKES_API = '/api/mistakes'
 const MEMORY_STORE = {}
 
 function getStorage() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage
+  if (typeof window !== 'undefined' && window.localStorage) return window.localStorage
+  if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage
+  return {
+    getItem: (key) => (key in MEMORY_STORE ? MEMORY_STORE[key] : null),
+    setItem: (key, value) => { MEMORY_STORE[key] = value },
+    removeItem: (key) => { delete MEMORY_STORE[key] },
   }
-  if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-    return globalThis.localStorage
-  }
-  return { getItem: (key) => (key in MEMORY_STORE ? MEMORY_STORE[key] : null), setItem: (key, value) => { MEMORY_STORE[key] = value }, removeItem: (key) => { delete MEMORY_STORE[key] } }
 }
 
 function safeRead(key, fallback = []) {
   try {
-    const storage = getStorage()
-    const raw = storage.getItem(key)
+    const raw = getStorage().getItem(key)
     return raw ? JSON.parse(raw) : fallback
   } catch {
     return fallback
@@ -24,31 +23,21 @@ function safeRead(key, fallback = []) {
 
 function safeWrite(key, value) {
   try {
-    const storage = getStorage()
-    storage.setItem(key, JSON.stringify(value))
+    getStorage().setItem(key, JSON.stringify(value))
   } catch {
-    // ignore storage write failures
+    // The server remains the source of truth if browser storage is unavailable.
   }
 }
 
 export async function fetchMistakesFromApi() {
-  if (typeof fetch !== 'function') {
-    return getMistakes()
-  }
+  if (typeof fetch !== 'function') return getMistakes()
 
-  try {
-    const response = await fetch(MISTAKES_API, { cache: 'no-store' })
-    if (!response.ok) {
-      throw new Error(`Mistakes API failed with ${response.status}`)
-    }
-
-    const payload = await response.json()
-    const nextEntries = Array.isArray(payload) ? payload : []
-    safeWrite(MISTAKES_KEY, nextEntries)
-    return nextEntries
-  } catch {
-    return getMistakes()
-  }
+  const response = await fetch(MISTAKES_API, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Could not load saved mistakes.')
+  const payload = await response.json()
+  const entries = Array.isArray(payload) ? payload : []
+  safeWrite(MISTAKES_KEY, entries)
+  return entries
 }
 
 export function getMistakes() {
@@ -56,11 +45,9 @@ export function getMistakes() {
   return Array.isArray(entries) ? entries : []
 }
 
-export function addMistake({ subjectId, subjectName, text }) {
+export async function addMistake({ subjectId, subjectName, text }) {
   const trimmed = String(text || '').trim()
-  if (!subjectId || !trimmed) {
-    return null
-  }
+  if (!subjectId || !trimmed) return null
 
   const entry = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -70,25 +57,37 @@ export function addMistake({ subjectId, subjectName, text }) {
     createdAt: Date.now(),
   }
 
-  const nextEntries = [entry, ...getMistakes()]
-  safeWrite(MISTAKES_KEY, nextEntries)
-  if (typeof fetch === 'function') {
-    fetch(MISTAKES_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    }).catch(() => undefined)
+  if (typeof fetch !== 'function') {
+    const nextEntries = [entry, ...getMistakes()]
+    safeWrite(MISTAKES_KEY, nextEntries)
+    return entry
   }
-  return entry
+
+  const response = await fetch(MISTAKES_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  })
+  if (!response.ok) throw new Error('Could not save the mistake.')
+  const payload = await response.json()
+  const nextEntries = Array.isArray(payload) ? payload : [entry, ...getMistakes()]
+  safeWrite(MISTAKES_KEY, nextEntries)
+  return nextEntries.find((item) => item.id === entry.id) || entry
 }
 
-export function deleteMistake(id) {
+export async function deleteMistake(id) {
   const nextEntries = getMistakes().filter((entry) => entry.id !== id)
-  safeWrite(MISTAKES_KEY, nextEntries)
-  if (typeof fetch === 'function') {
-    fetch(`${MISTAKES_API}/${id}`, { method: 'DELETE' }).catch(() => undefined)
+  if (typeof fetch !== 'function') {
+    safeWrite(MISTAKES_KEY, nextEntries)
+    return nextEntries
   }
-  return nextEntries
+
+  const response = await fetch(MISTAKES_API + '/' + encodeURIComponent(id), { method: 'DELETE' })
+  if (!response.ok) throw new Error('Could not delete the mistake.')
+  const payload = await response.json()
+  const savedEntries = Array.isArray(payload) ? payload : nextEntries
+  safeWrite(MISTAKES_KEY, savedEntries)
+  return savedEntries
 }
 
 export function getMistakesBySubject(subjectId) {

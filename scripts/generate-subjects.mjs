@@ -1,9 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+const DEFAULT_NOTES_DIR = path.resolve(process.cwd(), 'notes')
 const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
   ? path.resolve(process.env.P850_NOTES_ROOT)
-  : path.resolve(process.cwd(), 'notes')
+  : DEFAULT_NOTES_DIR
 const PUBLIC_NOTES_DIR = path.resolve(process.cwd(), 'public/notes')
 const SUBJECTS_FILE = path.resolve(process.cwd(), 'src/data/subjects.json')
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg)$/i
@@ -22,6 +23,51 @@ const SUBJECT_ORDER = [
   'dbms',
   'computer networks',
 ]
+
+export function normalizeFolderName(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+}
+
+export function sortSubjectFolders(folders) {
+  return [...folders].sort((a, b) => {
+    const aKey = normalizeFolderName(a)
+    const bKey = normalizeFolderName(b)
+    const aIndex = SUBJECT_ORDER.indexOf(aKey)
+    const bIndex = SUBJECT_ORDER.indexOf(bKey)
+
+    if (aIndex !== -1 || bIndex !== -1) {
+      if (aIndex === -1) return 1
+      if (bIndex === -1) return -1
+      return aIndex - bIndex
+    }
+
+    return aKey.localeCompare(bKey)
+  })
+}
+
+function resolveNotesRoot() {
+  const candidates = []
+
+  if (process.env.P850_NOTES_ROOT) {
+    candidates.push(path.resolve(process.env.P850_NOTES_ROOT))
+  }
+
+  candidates.push(DEFAULT_NOTES_DIR)
+
+  const uniqueCandidates = [...new Set(candidates.map((candidate) => path.resolve(candidate)))]
+
+  for (const candidate of uniqueCandidates) {
+    if (fs.existsSync(candidate) && fs.readdirSync(candidate, { withFileTypes: true }).some((entry) => entry.isDirectory())) {
+      return candidate
+    }
+  }
+
+  return DEFAULT_NOTES_DIR
+}
 
 function slugify(value) {
   return String(value)
@@ -51,13 +97,16 @@ function shortName(value) {
   return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join('').slice(0, 3)
 }
 
-function imageSortKey(fileName) {
-  const match = String(fileName).match(/^IMG_(\d{4})(\d{2})(\d{2})_(.+?)(\.[a-z0-9]+)$/i)
+export function imageSortKey(fileName) {
+  const cleanName = String(fileName).trim()
+  const match = cleanName.match(/^(?:IMG_)?(\d{4})(\d{2})(\d{2})[_-]?(.*?)(\.[a-z0-9]+)$/i)
   if (!match) {
-    return `${String(fileName).toLowerCase()}-0`
+    return `${cleanName.toLowerCase()}-0`
   }
 
-  return `${match[1]}-${match[2]}-${match[3]}-${match[4]}`
+  const [, year, month, day, noteId, extension] = match
+  const normalizedId = String(noteId || '0').toLowerCase().replace(/^_+|_+$/g, '')
+  return `${year}-${month}-${day}-${normalizedId}${extension.toLowerCase()}`
 }
 
 function getImagesInDir(dirPath) {
@@ -70,7 +119,7 @@ function getImagesInDir(dirPath) {
     .sort((a, b) => imageSortKey(a).localeCompare(imageSortKey(b)))
 }
 
-function ensurePublicLinks(subjectFolders) {
+function ensurePublicLinks(subjectFolders, notesRoot = ROOT_NOTES_DIR) {
   fs.mkdirSync(PUBLIC_NOTES_DIR, { recursive: true })
 
   for (const entry of fs.readdirSync(PUBLIC_NOTES_DIR, { withFileTypes: true })) {
@@ -82,7 +131,7 @@ function ensurePublicLinks(subjectFolders) {
   }
 
   for (const folderName of subjectFolders) {
-    const realDir = path.join(ROOT_NOTES_DIR, folderName)
+    const realDir = path.join(notesRoot, folderName)
     const linkPath = path.join(PUBLIC_NOTES_DIR, slugify(folderName))
     if (fs.existsSync(realDir)) {
       if (fs.existsSync(linkPath)) fs.rmSync(linkPath, { recursive: true, force: true })
@@ -92,81 +141,56 @@ function ensurePublicLinks(subjectFolders) {
 }
 
 function buildTopicsForSubject(subjectDir) {
-  const entries = fs.readdirSync(subjectDir, { withFileTypes: true })
   const topicItems = []
-  const directImages = getImagesInDir(subjectDir)
+  const subjectSlug = slugify(path.basename(subjectDir))
 
-  if (directImages.length > 0) {
-    const folderSlug = slugify(path.basename(subjectDir))
-    topicItems.push({
-      id: `${folderSlug}-notes`,
-      name: `${toTitle(path.basename(subjectDir))} Notes`,
-      description: `Revision notes for ${toTitle(path.basename(subjectDir))}.`,
-      images: directImages.map((file) => `/notes/${folderSlug}/${encodeURIComponent(file)}`),
-    })
+  function visit(directory, relativeParts = []) {
+    const images = getImagesInDir(directory)
+    const title = relativeParts.length ? relativeParts.map(toTitle).join(' / ') : `${toTitle(path.basename(subjectDir))} Notes`
+
+    if (images.length > 0) {
+      topicItems.push({
+        id: relativeParts.length ? `${subjectSlug}-${relativeParts.map(slugify).join('-')}` : `${subjectSlug}-notes`,
+        name: relativeParts.length ? `${title} Notes` : title,
+        description: `Revision notes for ${title.replace(/ Notes$/, '')}.`,
+        images: images.map((file) => `/notes/${subjectSlug}/${[...relativeParts, file].map(encodeURIComponent).join('/')}`),
+      })
+    }
+
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        visit(path.join(directory, entry.name), [...relativeParts, entry.name])
+      }
+    }
   }
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-
-    const subDir = path.join(subjectDir, entry.name)
-    const subImages = getImagesInDir(subDir)
-    if (subImages.length === 0) continue
-
-    const topicId = `${slugify(path.basename(subjectDir))}-${slugify(entry.name)}`
-    topicItems.push({
-      id: topicId,
-      name: `${toTitle(entry.name)} Notes`,
-      description: `Revision notes for ${toTitle(entry.name)}.`,
-      images: subImages.map((file) => `/notes/${slugify(path.basename(subjectDir))}/${encodeURIComponent(entry.name)}/${encodeURIComponent(file)}`),
-    })
-  }
-
+  visit(subjectDir)
   return topicItems.length > 0 ? topicItems : [{
-    id: `${slugify(path.basename(subjectDir))}-notes`,
+    id: `${subjectSlug}-notes`,
     name: `${toTitle(path.basename(subjectDir))} Notes`,
     description: `Revision notes for ${toTitle(path.basename(subjectDir))}.`,
     images: [],
   }]
 }
 
-function normalizeFolderName(value) {
-  return String(value)
-    .trim()
-    .toLowerCase()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-}
-
 function buildSubjects() {
-  if (!fs.existsSync(ROOT_NOTES_DIR)) {
+  const notesRoot = resolveNotesRoot()
+
+  if (!fs.existsSync(notesRoot)) {
     return []
   }
 
   const subjectFolders = fs
-    .readdirSync(ROOT_NOTES_DIR, { withFileTypes: true })
+    .readdirSync(notesRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
 
-  const orderedFolders = [...subjectFolders].sort((a, b) => {
-    const aKey = normalizeFolderName(a)
-    const bKey = normalizeFolderName(b)
-    const aIndex = SUBJECT_ORDER.indexOf(aKey)
-    const bIndex = SUBJECT_ORDER.indexOf(bKey)
+  const orderedFolders = sortSubjectFolders(subjectFolders)
 
-    if (aIndex !== -1 || bIndex !== -1) {
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
-      return aIndex - bIndex
-    }
-
-    return aKey.localeCompare(bKey)
-  })
-
-  ensurePublicLinks(orderedFolders)
+  ensurePublicLinks(orderedFolders, notesRoot)
 
   return orderedFolders.map((folderName) => {
-    const subjectDir = path.join(ROOT_NOTES_DIR, folderName)
+    const subjectDir = path.join(notesRoot, folderName)
     const topics = buildTopicsForSubject(subjectDir)
 
     return {
