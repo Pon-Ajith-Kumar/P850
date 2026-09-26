@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const ROOT_NOTES_DIR = '/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes'
+const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
+  ? path.resolve(process.env.P850_NOTES_ROOT)
+  : path.resolve(process.cwd(), 'notes')
 const PUBLIC_NOTES_DIR = path.resolve(process.cwd(), 'public/notes')
 const SUBJECTS_FILE = path.resolve(process.cwd(), 'src/data/subjects.json')
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg)$/i

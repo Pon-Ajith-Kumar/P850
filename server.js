@@ -10,7 +10,9 @@ const DATA_DIR = path.join(ROOT_DIR, 'data')
 const TEST_ENTRIES_FILE = path.join(DATA_DIR, 'test-entries.json')
 const BOOKMARKS_FILE = path.join(DATA_DIR, 'bookmarks.json')
 const MISTAKES_FILE = path.join(DATA_DIR, 'mistakes.json')
-const NOTES_ROOT = '/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes'
+const NOTES_ROOT = process.env.P850_NOTES_ROOT
+  ? path.resolve(process.env.P850_NOTES_ROOT)
+  : path.join(ROOT_DIR, 'notes')
 const PORT = Number(process.env.PORT || 3000)
 const HOST = process.env.HOST || '0.0.0.0'
 const ACCESS_CODE = String(process.env.P850_ACCESS_CODE || '').trim()

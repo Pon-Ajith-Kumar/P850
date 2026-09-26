@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: p850
+    env: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: P850_NOTES_ROOT
+        value: ./notes
+      - key: P850_ACCESS_CODE
+        sync: false
+      - key: P850_ACCESS_PIN
+        sync: false
