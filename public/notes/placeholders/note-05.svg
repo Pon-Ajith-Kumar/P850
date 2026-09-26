@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" fill="#f8fafc"/>
+  <rect x="80" y="80" width="1040" height="1440" rx="30" fill="#ffffff" stroke="#cbd5e1" stroke-width="4"/>
+  <rect x="150" y="180" width="180" height="180" rx="18" fill="#dbeafe"/>
+  <rect x="380" y="180" width="560" height="30" rx="15" fill="#e2e8f0"/>
+  <rect x="380" y="240" width="430" height="30" rx="15" fill="#e2e8f0"/>
+  <rect x="380" y="300" width="500" height="30" rx="15" fill="#e2e8f0"/>
+  <rect x="150" y="430" width="260" height="260" rx="24" fill="#dbeafe"/>
+  <rect x="470" y="430" width="260" height="260" rx="24" fill="#dbeafe"/>
+  <rect x="790" y="430" width="260" height="260" rx="24" fill="#dbeafe"/>
+  <rect x="150" y="760" width="900" height="18" rx="9" fill="#e2e8f0"/>
+  <rect x="150" y="810" width="870" height="18" rx="9" fill="#e2e8f0"/>
+  <rect x="150" y="860" width="830" height="18" rx="9" fill="#e2e8f0"/>
+  <rect x="150" y="940" width="220" height="160" rx="20" fill="#dbeafe"/>
+  <rect x="420" y="940" width="220" height="160" rx="20" fill="#dbeafe"/>
+  <rect x="690" y="940" width="220" height="160" rx="20" fill="#dbeafe"/>
+  <text x="150" y="1365" font-family="Arial, sans-serif" font-size="52" fill="#1e293b">Sample Note Page 5</text>
+</svg>

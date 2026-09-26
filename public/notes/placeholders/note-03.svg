@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" fill="#f8fafc"/>
+  <rect x="80" y="80" width="1040" height="1440" rx="30" fill="#ffffff" stroke="#cbd5e1" stroke-width="4"/>
+  <rect x="150" y="150" width="250" height="50" rx="25" fill="#dbeafe"/>
+  <rect x="150" y="240" width="900" height="20" rx="10" fill="#e2e8f0"/>
+  <rect x="150" y="290" width="780" height="20" rx="10" fill="#e2e8f0"/>
+  <rect x="150" y="340" width="840" height="20" rx="10" fill="#e2e8f0"/>
+  <rect x="150" y="460" width="500" height="14" rx="7" fill="#bfdbfe"/>
+  <path d="M150 550 H1050" stroke="#cbd5e1" stroke-width="8"/>
+  <path d="M150 640 H1050" stroke="#cbd5e1" stroke-width="8"/>
+  <path d="M150 730 H1050" stroke="#cbd5e1" stroke-width="8"/>
+  <rect x="150" y="830" width="200" height="200" rx="20" fill="#dbeafe"/>
+  <rect x="420" y="830" width="200" height="200" rx="20" fill="#dbeafe"/>
+  <rect x="690" y="830" width="200" height="200" rx="20" fill="#dbeafe"/>
+  <text x="150" y="1275" font-family="Arial, sans-serif" font-size="52" fill="#1e293b">Sample Note Page 3</text>
+</svg>

@@ -1,0 +1,201 @@
+{
+  "subjects": [
+    {
+      "id": "discrete-maths",
+      "name": "Discrete Maths",
+      "shortName": "DM",
+      "description": "Revision notes for Discrete Maths.",
+      "topics": [
+        {
+          "id": "discrete-maths-notes",
+          "name": "Discrete Maths Notes",
+          "description": "Revision notes for Discrete Maths.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "engineering-maths",
+      "name": "Engineering Maths",
+      "shortName": "EM",
+      "description": "Revision notes for Engineering Maths.",
+      "topics": [
+        {
+          "id": "engineering-maths-notes",
+          "name": "Engineering Maths Notes",
+          "description": "Revision notes for Engineering Maths.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "aptitude",
+      "name": "Aptitude",
+      "shortName": "APT",
+      "description": "Revision notes for Aptitude.",
+      "topics": [
+        {
+          "id": "aptitude-notes",
+          "name": "Aptitude Notes",
+          "description": "Revision notes for Aptitude.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "c-programming",
+      "name": "C Programming",
+      "shortName": "CP",
+      "description": "Revision notes for C Programming.",
+      "topics": [
+        {
+          "id": "c-programming-notes",
+          "name": "C Programming Notes",
+          "description": "Revision notes for C Programming.",
+          "images": [
+            "/notes/c-programming/IMG_20260808_231726.jpg",
+            "/notes/c-programming/IMG_20260808_233956.jpg",
+            "/notes/c-programming/IMG_20260808_235712.jpg",
+            "/notes/c-programming/IMG_20260812_231520.jpg",
+            "/notes/c-programming/IMG_20260812_232802.jpg",
+            "/notes/c-programming/IMG_20260812_234839.jpg",
+            "/notes/c-programming/IMG_20260925_001627.jpg",
+            "/notes/c-programming/IMG_20260925_002525.jpg",
+            "/notes/c-programming/IMG_20260925_003642.jpg",
+            "/notes/c-programming/IMG_20260926_085958.jpg",
+            "/notes/c-programming/IMG_20260926_091127.jpg",
+            "/notes/c-programming/IMG_20260926_092548.jpg",
+            "/notes/c-programming/IMG_20260926_093722.jpg",
+            "/notes/c-programming/IMG_20260926_100829.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-structures",
+      "name": "Data Structures",
+      "shortName": "DS",
+      "description": "Revision notes for Data Structures.",
+      "topics": [
+        {
+          "id": "data-structures-notes",
+          "name": "Data Structures Notes",
+          "description": "Revision notes for Data Structures.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "algorithms",
+      "name": "Algorithms",
+      "shortName": "ALG",
+      "description": "Revision notes for Algorithms.",
+      "topics": [
+        {
+          "id": "algorithms-notes",
+          "name": "Algorithms Notes",
+          "description": "Revision notes for Algorithms.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "theory-of-computation",
+      "name": "Theory Of Computation",
+      "shortName": "TO",
+      "description": "Revision notes for Theory Of Computation.",
+      "topics": [
+        {
+          "id": "theory-of-computation-notes",
+          "name": "Theory Of Computation Notes",
+          "description": "Revision notes for Theory Of Computation.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "compiler-design",
+      "name": "Compiler Design",
+      "shortName": "CD",
+      "description": "Revision notes for Compiler Design.",
+      "topics": [
+        {
+          "id": "compiler-design-notes",
+          "name": "Compiler Design Notes",
+          "description": "Revision notes for Compiler Design.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "digital-logic",
+      "name": "Digital Logic",
+      "shortName": "DL",
+      "description": "Revision notes for Digital Logic.",
+      "topics": [
+        {
+          "id": "digital-logic-notes",
+          "name": "Digital Logic Notes",
+          "description": "Revision notes for Digital Logic.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "coa",
+      "name": "COA",
+      "shortName": "COA",
+      "description": "Revision notes for COA.",
+      "topics": [
+        {
+          "id": "coa-notes",
+          "name": "COA Notes",
+          "description": "Revision notes for COA.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "operating-system",
+      "name": "Operating System",
+      "shortName": "OS",
+      "description": "Revision notes for Operating System.",
+      "topics": [
+        {
+          "id": "operating-system-notes",
+          "name": "Operating System Notes",
+          "description": "Revision notes for Operating System.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "dbms",
+      "name": "DBMS",
+      "shortName": "DBM",
+      "description": "Revision notes for DBMS.",
+      "topics": [
+        {
+          "id": "dbms-notes",
+          "name": "DBMS Notes",
+          "description": "Revision notes for DBMS.",
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "computer-networks",
+      "name": "Computer Networks",
+      "shortName": "CN",
+      "description": "Revision notes for Computer Networks.",
+      "topics": [
+        {
+          "id": "computer-networks-notes",
+          "name": "Computer Networks Notes",
+          "description": "Revision notes for Computer Networks.",
+          "images": []
+        }
+      ]
+    }
+  ]
+}
