@@ -4,11 +4,13 @@ services:
     env: node
     plan: free
     region: frankfurt
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: HOST
         value: 0.0.0.0
       - key: PORT
