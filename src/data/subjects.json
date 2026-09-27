@@ -208,7 +208,15 @@
           "id": "computer-networks-notes",
           "name": "Computer Networks Notes",
           "description": "Revision notes for Computer Networks.",
-          "images": []
+          "images": [
+            "/notes/computer-networks/IMG_20260925_002525.jpg",
+            "/notes/computer-networks/IMG_20260925_003642.jpg",
+            "/notes/computer-networks/IMG_20260926_085958.jpg",
+            "/notes/computer-networks/IMG_20260926_091127.jpg",
+            "/notes/computer-networks/IMG_20260926_092548.jpg",
+            "/notes/computer-networks/IMG_20260926_093722.jpg",
+            "/notes/computer-networks/IMG_20260926_100829.jpg"
+          ]
         }
       ]
     }
