@@ -141,7 +141,6 @@ function Mistakes() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {subjects.map((subject) => {
             const entries = mistakesBySubject[subject.id] || []
-            if (entries.length === 0) return null
 
             return (
               <div key={subject.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
@@ -152,23 +151,29 @@ function Mistakes() {
                   </span>
                 </div>
 
-                <ul className="space-y-2">
-                  {entries.map((entry) => (
-                    <li key={entry.id} className="rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm text-slate-700 dark:text-slate-200">{entry.text}</p>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(subject.id, entry.id)}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
-                          aria-label="Delete mistake"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                {entries.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 p-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400">
+                    No mistakes recorded for this subject.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {entries.map((entry) => (
+                      <li key={entry.id} className="rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm text-slate-700 dark:text-slate-200">{entry.text}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(subject.id, entry.id)}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                            aria-label="Delete mistake"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )
           })}
