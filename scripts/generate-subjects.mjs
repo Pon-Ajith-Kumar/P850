@@ -8,21 +8,23 @@ const ROOT_NOTES_DIR = process.env.P850_NOTES_ROOT
 const PUBLIC_NOTES_DIR = path.resolve(process.cwd(), 'public/notes')
 const SUBJECTS_FILE = path.resolve(process.cwd(), 'src/data/subjects.json')
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg)$/i
-const SUBJECT_ORDER = [
-  'discrete maths',
-  'engineering maths',
-  'aptitude',
-  'c programming',
-  'data structures',
-  'algorithms',
-  'theory of computation',
-  'compiler design',
-  'digital logic',
-  'coa',
-  'operating system',
-  'dbms',
-  'computer networks',
+const SUBJECT_DEFINITIONS = [
+  { id: 'discrete-maths', name: 'Discrete Maths', shortName: 'DM' },
+  { id: 'engineering-maths', name: 'Engineering Maths', shortName: 'EM' },
+  { id: 'aptitude', name: 'Aptitude', shortName: 'APT' },
+  { id: 'c-programming', name: 'C Programming', shortName: 'CP' },
+  { id: 'data-structures', name: 'Data Structures', shortName: 'DS' },
+  { id: 'algorithms', name: 'Algorithms', shortName: 'ALG' },
+  { id: 'theory-of-computation', name: 'Theory Of Computation', shortName: 'TO' },
+  { id: 'compiler-design', name: 'Compiler Design', shortName: 'CD' },
+  { id: 'digital-logic', name: 'Digital Logic', shortName: 'DL' },
+  { id: 'coa', name: 'COA', shortName: 'COA' },
+  { id: 'operating-system', name: 'Operating System', shortName: 'OS' },
+  { id: 'dbms', name: 'DBMS', shortName: 'DBM' },
+  { id: 'computer-networks', name: 'Computer Networks', shortName: 'CN' },
 ]
+
+const SUBJECT_ORDER = SUBJECT_DEFINITIONS.map((subject) => subject.name.toLowerCase())
 
 export function normalizeFolderName(value) {
   return String(value)
@@ -213,7 +215,19 @@ function buildSubjects() {
   const notesRoot = resolveNotesRoot()
 
   if (!fs.existsSync(notesRoot)) {
-    return []
+    // Even when the local notes directory is unavailable, keep the complete
+    // canonical subject list so Subjects and Mistakes never depend on which
+    // subjects currently have note images.
+    return SUBJECT_DEFINITIONS.map((subject) => ({
+      ...subject,
+      description: `Revision notes for ${subject.name}.`,
+      topics: [{
+        id: `${subject.id}-notes`,
+        name: `${subject.name} Notes`,
+        description: `Revision notes for ${subject.name}.`,
+        images: [],
+      }],
+    }))
   }
 
   const subjectFolders = fs
@@ -221,22 +235,48 @@ function buildSubjects() {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
 
-  const orderedFolders = sortSubjectFolders(subjectFolders)
+  ensurePublicLinks(subjectFolders, notesRoot)
 
-  ensurePublicLinks(orderedFolders, notesRoot)
+  const folderByNormalizedName = new Map(
+    subjectFolders.map((folderName) => [normalizeFolderName(folderName), folderName]),
+  )
 
-  return orderedFolders.map((folderName) => {
-    const subjectDir = path.join(notesRoot, folderName)
-    const topics = buildTopicsForSubject(subjectDir)
+  const canonicalSubjects = SUBJECT_DEFINITIONS.map((subject) => {
+    const matchingFolder = folderByNormalizedName.get(normalizeFolderName(subject.name))
+    const subjectDir = matchingFolder ? path.join(notesRoot, matchingFolder) : null
+    const topics = subjectDir
+      ? buildTopicsForSubject(subjectDir)
+      : [{
+          id: `${subject.id}-notes`,
+          name: `${subject.name} Notes`,
+          description: `Revision notes for ${subject.name}.`,
+          images: [],
+        }]
 
     return {
-      id: slugify(folderName),
-      name: toTitle(folderName),
-      shortName: shortName(folderName),
-      description: `Revision notes for ${toTitle(folderName)}.`,
+      ...subject,
+      description: `Revision notes for ${subject.name}.`,
       topics,
     }
   })
+
+  // Keep any additional note folders after the canonical GATE subjects instead
+  // of silently dropping them. They never disturb the required subject order.
+  const canonicalIds = new Set(SUBJECT_DEFINITIONS.map((subject) => subject.id))
+  const extraSubjects = sortSubjectFolders(subjectFolders)
+    .filter((folderName) => !canonicalIds.has(slugify(folderName)))
+    .map((folderName) => {
+      const subjectDir = path.join(notesRoot, folderName)
+      return {
+        id: slugify(folderName),
+        name: toTitle(folderName),
+        shortName: shortName(folderName),
+        description: `Revision notes for ${toTitle(folderName)}.`,
+        topics: buildTopicsForSubject(subjectDir),
+      }
+    })
+
+  return [...canonicalSubjects, ...extraSubjects]
 }
 
 const payload = { subjects: buildSubjects() }

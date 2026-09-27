@@ -26,13 +26,6 @@ function Subjects() {
     return () => window.clearInterval(timer)
   }, [recentMistakes.length])
 
-  const orderedSubjects = (() => {
-    if (!continueSubject) return subjects
-
-    const remaining = subjects.filter((subject) => subject.id !== continueSubject.id)
-    return [continueSubject, ...remaining]
-  })()
-
   const activeMistake = recentMistakes[activeMistakeIndex] || recentMistakes[0]
 
   return (
@@ -101,7 +94,7 @@ function Subjects() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {orderedSubjects.map((subject) => (
+          {subjects.map((subject) => (
             <SubjectCard key={subject.id} subject={subject} />
           ))}
         </div>
