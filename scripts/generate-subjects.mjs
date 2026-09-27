@@ -122,20 +122,56 @@ function getImagesInDir(dirPath) {
 function ensurePublicLinks(subjectFolders, notesRoot = ROOT_NOTES_DIR) {
   fs.mkdirSync(PUBLIC_NOTES_DIR, { recursive: true })
 
-  for (const entry of fs.readdirSync(PUBLIC_NOTES_DIR, { withFileTypes: true })) {
-    if (entry.name === 'placeholders') continue
-    const target = path.join(PUBLIC_NOTES_DIR, entry.name)
-    if (entry.isDirectory() || entry.isSymbolicLink()) {
-      fs.rmSync(target, { recursive: true, force: true })
+  // Build the set of links that should exist, keyed by slug, before touching anything
+  // on disk. This lets us diff against what is already there instead of deleting every
+  // link and recreating it on every run, which previously created a window where a
+  // subject's images were briefly unreachable and, under concurrent regeneration
+  // passes, could be left deleted rather than recreated.
+  const desired = new Map()
+  for (const folderName of subjectFolders) {
+    const realDir = path.join(notesRoot, folderName)
+    if (fs.existsSync(realDir)) {
+      desired.set(slugify(folderName), realDir)
     }
   }
 
-  for (const folderName of subjectFolders) {
-    const realDir = path.join(notesRoot, folderName)
-    const linkPath = path.join(PUBLIC_NOTES_DIR, slugify(folderName))
-    if (fs.existsSync(realDir)) {
-      if (fs.existsSync(linkPath)) fs.rmSync(linkPath, { recursive: true, force: true })
+  let existingEntries = []
+  try {
+    existingEntries = fs.readdirSync(PUBLIC_NOTES_DIR, { withFileTypes: true })
+  } catch (error) {
+    console.error(`[generate-subjects] Could not read ${PUBLIC_NOTES_DIR}:`, error.message)
+  }
+
+  for (const entry of existingEntries) {
+    if (entry.name === 'placeholders') continue
+    const linkPath = path.join(PUBLIC_NOTES_DIR, entry.name)
+    const realDir = desired.get(entry.name)
+
+    let isCorrectLink = false
+    if (realDir && entry.isSymbolicLink()) {
+      try {
+        isCorrectLink = fs.realpathSync(linkPath) === fs.realpathSync(realDir)
+      } catch {
+        isCorrectLink = false
+      }
+    }
+
+    if (!isCorrectLink) {
+      try {
+        fs.rmSync(linkPath, { recursive: true, force: true })
+      } catch (error) {
+        console.error(`[generate-subjects] Could not remove stale link ${linkPath}:`, error.message)
+      }
+    }
+  }
+
+  for (const [slug, realDir] of desired) {
+    const linkPath = path.join(PUBLIC_NOTES_DIR, slug)
+    if (fs.existsSync(linkPath)) continue
+    try {
       fs.symlinkSync(realDir, linkPath, 'dir')
+    } catch (error) {
+      console.error(`[generate-subjects] Could not link ${realDir} -> ${linkPath}:`, error.message)
     }
   }
 }
@@ -205,4 +241,8 @@ function buildSubjects() {
 
 const payload = { subjects: buildSubjects() }
 fs.mkdirSync(path.dirname(SUBJECTS_FILE), { recursive: true })
-fs.writeFileSync(SUBJECTS_FILE, `${JSON.stringify(payload, null, 2)}\n`)
+// Write to a temp file and rename over the target so a reader (Vite, or another
+// regeneration pass) never sees a partially-written, invalid JSON file.
+const temporarySubjectsFile = `${SUBJECTS_FILE}.tmp`
+fs.writeFileSync(temporarySubjectsFile, `${JSON.stringify(payload, null, 2)}\n`)
+fs.renameSync(temporarySubjectsFile, SUBJECTS_FILE)

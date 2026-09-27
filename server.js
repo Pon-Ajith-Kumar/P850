@@ -46,7 +46,7 @@ function startNotesWatcher() {
     const child = spawn(process.execPath, ['scripts/watch-notes.mjs'], {
       cwd: ROOT_DIR,
       stdio: 'inherit',
-      env: { ...process.env, NODE_ENV: 'production' },
+      env: process.env,
     })
 
     child.on('error', (error) => {
@@ -311,7 +311,13 @@ async function main() {
     }
   }
 
-  startNotesWatcher()
+  // The watcher exists so local edits under notes/ show up without restarting the
+  // app. In production the notes folder only ever changes via a fresh git deploy
+  // (see scripts/publish-notes.sh), so there is nothing for it to watch there —
+  // skip it to avoid burning CPU/memory on Render's free tier.
+  if (process.env.NODE_ENV !== 'production') {
+    startNotesWatcher()
+  }
 
   server.listen(PORT, HOST, () => {
     console.log(`[server] P850 app is running at http://${HOST}:${PORT}`)

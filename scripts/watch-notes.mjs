@@ -42,6 +42,13 @@ let pollTimer = null
 const watchedDirs = new Set()
 const fileWatchers = []
 let lastKnownSnapshot = null
+// Guards against two regeneration passes running at once. Without this, a burst of
+// filesystem events across more than one subject folder (e.g. adding photos to both
+// "C Programming" and "Data Structures" around the same time) can fire the debounced
+// timer again while the previous generate-subjects.mjs child is still writing
+// subjects.json and rebuilding the public/notes symlinks, corrupting both.
+let isRefreshing = false
+let refreshQueued = false
 
 function log(message) {
   console.log(`[watch-notes] ${message}`)
@@ -127,11 +134,26 @@ function scheduleRefresh() {
   timer = setTimeout(async () => {
     timer = null
 
+    if (isRefreshing) {
+      // A regeneration is already in flight; remember to run once more right after
+      // it finishes instead of starting a second, overlapping generator process.
+      refreshQueued = true
+      return
+    }
+
+    isRefreshing = true
     try {
       await runGenerator()
       await maybeAutoCommitAndPush()
     } catch (error) {
       console.error('[watch-notes] Regeneration failed:', error)
+    } finally {
+      isRefreshing = false
+    }
+
+    if (refreshQueued) {
+      refreshQueued = false
+      scheduleRefresh()
     }
   }, WATCH_DEBOUNCE_MS)
 }

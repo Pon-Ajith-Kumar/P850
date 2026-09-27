@@ -106,19 +106,30 @@ test('exportTestEntriesTable exports a spreadsheet-friendly CSV table', () => {
   assert.match(output, /DPP,PW,DPP 1,04\/05\/26,72\/100,72\.0%,28\.0%,Strong/)
 })
 
-test('mistake entries stay newest-first and can be removed', () => {
+test('mistake entries stay newest-first and can be removed', async () => {
   if (typeof localStorage !== 'undefined') {
     localStorage.clear()
   }
 
-  const first = addMistake({ subjectId: 'c-programming', subjectName: 'C Programming', text: 'Forgot to initialize loop variable' })
-  const second = addMistake({ subjectId: 'c-programming', subjectName: 'C Programming', text: 'Used wrong pointer condition' })
+  // addMistake/deleteMistake call the server API when fetch is available (as it is in
+  // Node 22+); both must be awaited or the assertions below run before the entry is
+  // actually saved. Force the localStorage-only fallback here since this test only
+  // cares about the newest-first ordering logic, not the network round trip.
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = undefined
 
-  const recent = getRecentMistakes(2)
-  assert.equal(recent[0].id, second.id)
-  assert.equal(recent[0].text, 'Used wrong pointer condition')
+  try {
+    const first = await addMistake({ subjectId: 'c-programming', subjectName: 'C Programming', text: 'Forgot to initialize loop variable' })
+    const second = await addMistake({ subjectId: 'c-programming', subjectName: 'C Programming', text: 'Used wrong pointer condition' })
 
-  const remaining = deleteMistake(first.id)
-  assert.equal(remaining.some((entry) => entry.id === first.id), false)
-  assert.equal(remaining.some((entry) => entry.id === second.id), true)
+    const recent = getRecentMistakes(2)
+    assert.equal(recent[0].id, second.id)
+    assert.equal(recent[0].text, 'Used wrong pointer condition')
+
+    const remaining = await deleteMistake(first.id)
+    assert.equal(remaining.some((entry) => entry.id === first.id), false)
+    assert.equal(remaining.some((entry) => entry.id === second.id), true)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })

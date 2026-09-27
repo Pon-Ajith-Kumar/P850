@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server.js & node scripts/watch-notes.mjs & vite --host 0.0.0.0",
+    "dev": "node server.js & vite --host 0.0.0.0",
     "build": "node scripts/generate-subjects.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
