@@ -304,6 +304,8 @@ function TestAnalyzer() {
               <input
                 type="number"
                 min="0"
+                step="any"
+                inputMode="decimal"
                 value={form.obtained}
                 onChange={(event) => setForm((prev) => ({ ...prev, obtained: event.target.value }))}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -315,6 +317,8 @@ function TestAnalyzer() {
               <input
                 type="number"
                 min="0"
+                step="any"
+                inputMode="decimal"
                 value={form.total}
                 onChange={(event) => setForm((prev) => ({ ...prev, total: event.target.value }))}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
