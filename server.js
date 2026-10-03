@@ -285,7 +285,13 @@ function serveStaticFile(res, filePath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://localhost')
-  const pathname = url.pathname
+  let pathname = url.pathname
+
+  try {
+    pathname = decodeURIComponent(pathname)
+  } catch {
+    pathname = url.pathname
+  }
 
   if (pathname.startsWith('/api/')) {
     try {
