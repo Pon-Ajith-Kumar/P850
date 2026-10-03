@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 const { sortTestEntries, calculatePerformance, getTrendSummary, normalizeTestEntry, exportTestEntriesTable } = await import('../src/utils/testAnalyzer.js')
-const { addMistake, deleteMistake, getRecentMistakes } = await import('../src/utils/mistakes.js')
+const { addMistake, deleteMistake, getRecentMistakes, updateMistake } = await import('../src/utils/mistakes.js')
 
 if (typeof localStorage !== 'undefined') {
   localStorage.clear()
@@ -104,6 +104,34 @@ test('exportTestEntriesTable exports a spreadsheet-friendly CSV table', () => {
 
   assert.match(output, /^Type,Series,Test,Date,Marks,Correct,Wrong,Comment\r?\n/)
   assert.match(output, /DPP,PW,DPP 1,04\/05\/26,72\/100,72\.0%,28\.0%,Strong/)
+})
+
+test('mistake entries can be updated before they are removed', async () => {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear()
+  }
+
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = undefined
+
+  try {
+    const created = await addMistake({ subjectId: 'c-programming', subjectName: 'C Programming', text: 'Forgot to initialize loop variable' })
+    const updated = await updateMistake(created.id, {
+      subjectId: 'data-structures',
+      subjectName: 'Data Structures',
+      text: 'Forgot to reset traversal pointer',
+    })
+
+    assert.equal(updated.subjectId, 'data-structures')
+    assert.equal(updated.subjectName, 'Data Structures')
+    assert.equal(updated.text, 'Forgot to reset traversal pointer')
+    assert.equal(getRecentMistakes(1)[0].id, created.id)
+
+    const remaining = await deleteMistake(created.id)
+    assert.equal(remaining.some((entry) => entry.id === created.id), false)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test('mistake entries stay newest-first and can be removed', async () => {

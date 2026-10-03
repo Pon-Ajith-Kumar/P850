@@ -1,17 +1,25 @@
-import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import subjectsData from '../data/subjects.json'
 import { startLivePolling } from '../utils/liveSync'
-import { addMistake, deleteMistake, fetchMistakesFromApi, getMistakes, getMistakesBySubject } from '../utils/mistakes'
+import { addMistake, deleteMistake, fetchMistakesFromApi, getMistakes, updateMistake } from '../utils/mistakes'
 
 const defaultFormState = {
   subjectId: 'c-programming',
   text: '',
 }
 
+function groupMistakesBySubject(entries, subjects) {
+  const grouped = {}
+  for (const subject of subjects) grouped[subject.id] = entries.filter((entry) => entry.subjectId === subject.id)
+  return grouped
+}
+
 function Mistakes() {
   const [mistakesBySubject, setMistakesBySubject] = useState({})
   const [form, setForm] = useState(defaultFormState)
+  const [editingMistakeId, setEditingMistakeId] = useState(null)
+  const [editingForm, setEditingForm] = useState(defaultFormState)
   const [error, setError] = useState('')
 
   const subjects = subjectsData.subjects
@@ -23,9 +31,7 @@ function Mistakes() {
       try {
         const nextEntries = await fetchMistakesFromApi()
         if (!isMounted) return
-        const grouped = {}
-        for (const subject of subjects) grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
-        setMistakesBySubject(grouped)
+        setMistakesBySubject(groupMistakesBySubject(nextEntries, subjects))
         setError('')
       } catch (loadError) {
         if (isMounted) setError(loadError.message || 'Could not load saved mistakes.')
@@ -36,15 +42,13 @@ function Mistakes() {
       fetcher: fetchMistakesFromApi,
       onData: (nextEntries) => {
         if (!isMounted) return
-        const grouped = {}
-        for (const subject of subjects) {
-          grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
-        }
-        setMistakesBySubject(grouped)
+        setMistakesBySubject(groupMistakesBySubject(nextEntries, subjects))
       },
       intervalMs: 4000,
       enabled: true,
     })
+
+    void syncMistakes()
 
     return () => {
       isMounted = false
@@ -84,13 +88,54 @@ function Mistakes() {
   const handleDelete = async (subjectId, mistakeId) => {
     try {
       const nextEntries = await deleteMistake(mistakeId)
-      const grouped = {}
-      for (const subject of subjects) grouped[subject.id] = nextEntries.filter((entry) => entry.subjectId === subject.id)
-      setMistakesBySubject(grouped)
+      setMistakesBySubject(groupMistakesBySubject(nextEntries, subjects))
       setError('')
     } catch (deleteError) {
       setError(deleteError.message || 'Could not delete the mistake.')
     }
+  }
+
+  const handleOpenEdit = (entry) => {
+    setEditingMistakeId(entry.id)
+    setEditingForm({
+      subjectId: entry.subjectId,
+      text: entry.text,
+    })
+    setError('')
+  }
+
+  const handleSaveEdit = async (event) => {
+    event.preventDefault()
+
+    if (!editingMistakeId) return
+
+    const subject = subjects.find((item) => item.id === editingForm.subjectId)
+
+    try {
+      const nextEntry = await updateMistake(editingMistakeId, {
+        subjectId: subject?.id || editingForm.subjectId,
+        subjectName: subject?.name || 'Unknown Subject',
+        text: editingForm.text,
+      })
+
+      if (!nextEntry) {
+        setError('Type a mistake before saving.')
+        return
+      }
+
+      setMistakesBySubject(groupMistakesBySubject(getMistakes(), subjects))
+      setEditingMistakeId(null)
+      setEditingForm(defaultFormState)
+      setError('')
+    } catch (saveError) {
+      setError(saveError.message || 'Could not update the mistake.')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMistakeId(null)
+    setEditingForm(defaultFormState)
+    setError('')
   }
 
   return (
@@ -157,21 +202,75 @@ function Mistakes() {
                   </div>
                 ) : (
                   <ul className="space-y-2">
-                    {entries.map((entry) => (
-                      <li key={entry.id} className="rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-slate-700 dark:text-slate-200">{entry.text}</p>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(subject.id, entry.id)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
-                            aria-label="Delete mistake"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                    {entries.map((entry) => {
+                      const isEditing = editingMistakeId === entry.id
+
+                      return isEditing ? (
+                        <li key={entry.id} className="rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+                          <form onSubmit={handleSaveEdit} className="space-y-2">
+                            <select
+                              value={editingForm.subjectId}
+                              onChange={(event) => setEditingForm((prev) => ({ ...prev, subjectId: event.target.value }))}
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-700 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                            >
+                              {subjects.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              value={editingForm.text}
+                              onChange={(event) => setEditingForm((prev) => ({ ...prev, text: event.target.value }))}
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="submit"
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-400"
+                              >
+                                <Check size={12} />
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                              >
+                                <X size={12} />
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        </li>
+                      ) : (
+                        <li key={entry.id} className="rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm text-slate-700 dark:text-slate-200">{entry.text}</p>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(entry)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:text-slate-300 dark:hover:bg-amber-950/30 dark:hover:text-amber-300"
+                                aria-label="Edit mistake"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(subject.id, entry.id)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                aria-label="Delete mistake"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </div>

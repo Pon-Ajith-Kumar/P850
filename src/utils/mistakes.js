@@ -75,6 +75,40 @@ export async function addMistake({ subjectId, subjectName, text }) {
   return nextEntries.find((item) => item.id === entry.id) || entry
 }
 
+export async function updateMistake(id, { subjectId, subjectName, text } = {}) {
+  const existing = getMistakes().find((entry) => String(entry.id) === String(id))
+  const trimmed = String(text ?? '').trim()
+  const nextSubjectId = String(subjectId || existing?.subjectId || '').trim()
+
+  if (!id || !nextSubjectId || !trimmed) return null
+
+  const updates = {
+    subjectId: nextSubjectId,
+    subjectName: subjectName || existing?.subjectName || 'Unknown Subject',
+    text: trimmed,
+    updatedAt: Date.now(),
+  }
+
+  const currentEntries = getMistakes()
+  const nextEntries = currentEntries.map((entry) => (String(entry.id) === String(id) ? { ...entry, ...updates } : entry))
+
+  if (typeof fetch !== 'function') {
+    safeWrite(MISTAKES_KEY, nextEntries)
+    return nextEntries.find((entry) => String(entry.id) === String(id)) || null
+  }
+
+  const response = await fetch(MISTAKES_API + '/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
+  if (!response.ok) throw new Error('Could not update the mistake.')
+  const payload = await response.json()
+  const savedEntries = Array.isArray(payload) ? payload : nextEntries
+  safeWrite(MISTAKES_KEY, savedEntries)
+  return savedEntries.find((entry) => String(entry.id) === String(id)) || nextEntries.find((entry) => String(entry.id) === String(id)) || null
+}
+
 export async function deleteMistake(id) {
   const nextEntries = getMistakes().filter((entry) => entry.id !== id)
   if (typeof fetch !== 'function') {

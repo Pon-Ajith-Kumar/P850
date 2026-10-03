@@ -206,6 +206,17 @@ async function handleApi(req, res, pathname) {
   if (mistakeMatch) {
     const mistakeId = decodeURIComponent(mistakeMatch[1])
 
+    if (req.method === 'PUT') {
+      try {
+        const parsed = await parseJsonBody(req)
+        const entries = await updateRecord('mistakes', mistakeId, parsed)
+        sendJson(res, 200, entries)
+      } catch (error) {
+        sendJson(res, error.code ? 503 : 400, { message: error.code ? 'Data store unavailable.' : error.message || 'Bad request' })
+      }
+      return
+    }
+
     if (req.method === 'DELETE') {
       const entries = await deleteRecord('mistakes', mistakeId)
       sendJson(res, 200, entries)
