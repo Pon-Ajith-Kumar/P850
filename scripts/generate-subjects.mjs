@@ -169,9 +169,23 @@ function ensurePublicLinks(subjectFolders, notesRoot = ROOT_NOTES_DIR) {
 
   for (const [slug, realDir] of desired) {
     const linkPath = path.join(PUBLIC_NOTES_DIR, slug)
-    if (fs.existsSync(linkPath)) continue
+    const relativeTarget = path.relative(PUBLIC_NOTES_DIR, realDir)
+
+    const needsRefresh = () => {
+      if (!fs.existsSync(linkPath)) return true
+      try {
+        if (!fs.lstatSync(linkPath).isSymbolicLink()) return true
+        return fs.readlinkSync(linkPath) !== relativeTarget
+      } catch {
+        return true
+      }
+    }
+
+    if (!needsRefresh()) continue
+
     try {
-      fs.symlinkSync(realDir, linkPath, 'dir')
+      fs.rmSync(linkPath, { recursive: true, force: true })
+      fs.symlinkSync(relativeTarget, linkPath, 'dir')
     } catch (error) {
       console.error(`[generate-subjects] Could not link ${realDir} -> ${linkPath}:`, error.message)
     }

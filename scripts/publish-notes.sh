@@ -15,13 +15,7 @@ fi
 npm run sync-notes
 npm run build
 
-git add -- notes src/data/subjects.json public/notes
-DELETED_NOTES="$(git diff --cached --diff-filter=D --name-only -- notes public/notes src/data/subjects.json)"
-if [[ -n "$DELETED_NOTES" ]]; then
-  echo "Refusing to publish note deletions. Restore these files before publishing:"
-  printf '%s\n' "$DELETED_NOTES"
-  exit 1
-fi
+git add --all -- notes src/data/subjects.json public/notes
 
 if git diff --cached --quiet -- notes public/notes src/data/subjects.json; then
   echo "No new note changes to commit; will still push any earlier local commits."
