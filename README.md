@@ -4,7 +4,7 @@ Private GATE study portal built with React, Vite, and a small Node.js API.
 
 ## Notes and images
 
-The fixed local notes source is `/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes`. The `npm run publish-notes` command is the unified update workflow. It recursively copies supported images into `notes/`, rebuilds subject metadata and the site, commits only the notes and generated subject data, then pushes `main` to GitHub. It handles new subject folders and nested topic folders, replaces changed files at the same path, and deliberately keeps repo files missing from the source. It prints added/replaced/unchanged totals.
+The fixed local notes source is the repo root `/home/lenovo/Files/00) GATE CS Repo`. Keep the subject folders as the first-level entries there, and let nested topic folders continue to work as they already do. The `npm run publish-notes` command is the unified update workflow. It recursively copies supported images into `notes/`, rebuilds subject metadata and the site, commits only the notes and generated subject data, then pushes `main` to GitHub. It handles new subject folders and nested topic folders, replaces changed files at the same path, and deliberately keeps repo files missing from the source. It prints added/replaced/unchanged totals. The script still accepts the legacy nested `00 GATE Revision Notes` folder for compatibility, but the normal workflow is now the fixed repo root.
 
 To use a different source location, set `P850_SOURCE_NOTES` for that command.
 

@@ -18,7 +18,7 @@ After this setup, Analyzer results, mistakes, and bookmarks are stored in Postgr
 
 ## Every future image or notes update
 
-1. Add images under the fixed source folder `/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes`, using the existing subject folder name. Nested topic folders are supported.
+1. Add or replace images directly under the fixed source root `/home/lenovo/Files/00) GATE CS Repo`, using the existing subject folder names as the first-level folders. Nested topic folders are supported.
 2. From this repository, on branch `main`, run:
 
    ```sh

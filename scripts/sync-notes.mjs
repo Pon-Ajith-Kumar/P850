@@ -3,7 +3,59 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SOURCE_ROOT = path.resolve(process.env.P850_SOURCE_NOTES || '/home/lenovo/Files/00) GATE CS Repo/00 GATE Revision Notes')
+const SUBJECT_FOLDER_NAMES = [
+  'Discrete Maths',
+  'Engineering Maths',
+  'Aptitude',
+  'C Programming',
+  'Data Structures',
+  'Algorithms',
+  'Theory of Computation',
+  'Compiler Design',
+  'Digital Logic',
+  'COA',
+  'Operating System',
+  'DBMS',
+  'Computer Networks',
+]
+
+function normalizeFolderName(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+}
+
+function resolveSourceRoot() {
+  const candidates = []
+
+  if (process.env.P850_SOURCE_NOTES) {
+    candidates.push(path.resolve(process.env.P850_SOURCE_NOTES))
+  }
+
+  const fixedRoot = '/home/lenovo/Files/00) GATE CS Repo'
+  const legacyRoot = path.join(fixedRoot, '00 GATE Revision Notes')
+
+  candidates.push(fixedRoot, legacyRoot)
+
+  for (const candidate of [...new Set(candidates)]) {
+    if (!candidate || !fs.existsSync(candidate) || !fs.statSync(candidate).isDirectory()) continue
+
+    const directFolderNames = fs.readdirSync(candidate, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+
+    const hasCanonicalSubjectFolder = directFolderNames.some((folderName) => SUBJECT_FOLDER_NAMES.some((subjectName) => normalizeFolderName(subjectName) === normalizeFolderName(folderName)))
+    if (hasCanonicalSubjectFolder || candidate === legacyRoot) {
+      return candidate
+    }
+  }
+
+  return fixedRoot
+}
+
+const SOURCE_ROOT = resolveSourceRoot()
 const DESTINATION_ROOT = path.join(PROJECT_ROOT, 'notes')
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'])
 
