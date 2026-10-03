@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SubjectCard from '../components/SubjectCard'
 import subjectsData from '../data/subjects.json'
-import { getRecentMistakes, updateMistake } from '../utils/mistakes'
+import { fetchMistakesFromApi, getRecentMistakes, updateMistake } from '../utils/mistakes'
+import { startLivePolling } from '../utils/liveSync'
 import { getContinueStudy } from '../utils/progress'
 
 function Subjects() {
@@ -13,12 +14,44 @@ function Subjects() {
     ? Math.min(Math.max(currentPage, 0), continueTopic.images.length - 1) + 1
     : 1
   const resumeImage = continueTopic?.images?.[Math.min(Math.max(currentPage, 0), (continueTopic.images?.length || 1) - 1)] || null
-  const [recentMistakes, setRecentMistakes] = useState(() => getRecentMistakes(20))
+  const [recentMistakes, setRecentMistakes] = useState([])
   const [activeMistakeIndex, setActiveMistakeIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState(null)
   const [editingMistakeId, setEditingMistakeId] = useState(null)
   const [editingText, setEditingText] = useState('')
   const [editError, setEditError] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+
+    const syncRecentMistakes = async () => {
+      try {
+        const nextMistakes = await fetchMistakesFromApi()
+        if (!isMounted) return
+        setRecentMistakes(nextMistakes.slice(0, 20))
+      } catch {
+        if (!isMounted) return
+        setRecentMistakes(getRecentMistakes(20))
+      }
+    }
+
+    const stopPolling = startLivePolling({
+      fetcher: fetchMistakesFromApi,
+      onData: (nextMistakes) => {
+        if (!isMounted) return
+        setRecentMistakes(Array.isArray(nextMistakes) ? nextMistakes.slice(0, 20) : getRecentMistakes(20))
+      },
+      intervalMs: 4000,
+      enabled: true,
+    })
+
+    void syncRecentMistakes()
+
+    return () => {
+      isMounted = false
+      stopPolling()
+    }
+  }, [])
 
   const moveMistake = (direction) => {
     if (recentMistakes.length <= 1) return
@@ -83,8 +116,8 @@ function Subjects() {
         return
       }
 
-      const nextMistakes = getRecentMistakes(20)
-      setRecentMistakes(nextMistakes)
+      const nextMistakes = await fetchMistakesFromApi()
+      setRecentMistakes(nextMistakes.slice(0, 20))
       setActiveMistakeIndex((prev) => Math.min(prev, Math.max(nextMistakes.length - 1, 0)))
       setEditingMistakeId(null)
       setEditingText('')
