@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowRight, Check, Pencil, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SubjectCard from '../components/SubjectCard'
 import subjectsData from '../data/subjects.json'
@@ -13,7 +13,7 @@ function Subjects() {
     ? Math.min(Math.max(currentPage, 0), continueTopic.images.length - 1) + 1
     : 1
   const resumeImage = continueTopic?.images?.[Math.min(Math.max(currentPage, 0), (continueTopic.images?.length || 1) - 1)] || null
-  const recentMistakes = useMemo(() => getRecentMistakes(20), [])
+  const [recentMistakes, setRecentMistakes] = useState(() => getRecentMistakes(20))
   const [activeMistakeIndex, setActiveMistakeIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState(null)
   const [editingMistakeId, setEditingMistakeId] = useState(null)
@@ -83,10 +83,12 @@ function Subjects() {
         return
       }
 
+      const nextMistakes = getRecentMistakes(20)
+      setRecentMistakes(nextMistakes)
+      setActiveMistakeIndex((prev) => Math.min(prev, Math.max(nextMistakes.length - 1, 0)))
       setEditingMistakeId(null)
       setEditingText('')
       setEditError('')
-      window.location.reload()
     } catch (saveError) {
       setEditError(saveError.message || 'Could not update the mistake.')
     }
