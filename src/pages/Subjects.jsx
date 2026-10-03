@@ -15,16 +15,47 @@ function Subjects() {
   const resumeImage = continueTopic?.images?.[Math.min(Math.max(currentPage, 0), (continueTopic.images?.length || 1) - 1)] || null
   const recentMistakes = useMemo(() => getRecentMistakes(20), [])
   const [activeMistakeIndex, setActiveMistakeIndex] = useState(0)
+  const [touchStartX, setTouchStartX] = useState(null)
+
+  const moveMistake = (direction) => {
+    if (recentMistakes.length <= 1) return
+    setActiveMistakeIndex((prev) => {
+      const nextIndex = (prev + direction + recentMistakes.length) % recentMistakes.length
+      return nextIndex
+    })
+  }
 
   useEffect(() => {
     if (recentMistakes.length <= 1) return undefined
 
-    const timer = window.setInterval(() => {
-      setActiveMistakeIndex((prev) => (prev + 1) % recentMistakes.length)
-    }, 5000)
+    const timer = window.setTimeout(() => {
+      moveMistake(1)
+    }, 10000)
 
-    return () => window.clearInterval(timer)
-  }, [recentMistakes.length])
+    return () => window.clearTimeout(timer)
+  }, [activeMistakeIndex, recentMistakes.length])
+
+  const handleSwipeStart = (event) => {
+    const touchX = event.touches?.[0]?.clientX ?? event.clientX
+    if (typeof touchX === 'number') setTouchStartX(touchX)
+  }
+
+  const handleSwipeEnd = (event) => {
+    if (touchStartX == null) return
+
+    const touchX = event.changedTouches?.[0]?.clientX ?? event.clientX
+    if (typeof touchX !== 'number') {
+      setTouchStartX(null)
+      return
+    }
+
+    const deltaX = touchX - touchStartX
+    if (Math.abs(deltaX) > 40) {
+      moveMistake(deltaX < 0 ? 1 : -1)
+    }
+
+    setTouchStartX(null)
+  }
 
   const activeMistake = recentMistakes[activeMistakeIndex] || recentMistakes[0]
 
@@ -75,7 +106,13 @@ function Subjects() {
             <span className="text-[10px] font-semibold uppercase tracking-[0.22em]">Recent mistakes</span>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-white/80 p-3 dark:border-amber-800 dark:bg-slate-900/70">
+          <div
+            className="relative overflow-hidden rounded-2xl border border-amber-200 bg-white/80 p-3 dark:border-amber-800 dark:bg-slate-900/70"
+            onTouchStart={handleSwipeStart}
+            onTouchEnd={handleSwipeEnd}
+            onMouseDown={handleSwipeStart}
+            onMouseUp={handleSwipeEnd}
+          >
             <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
               <span>{activeMistake.subjectName}</span>
               <span>{activeMistakeIndex + 1}/{recentMistakes.length}</span>
