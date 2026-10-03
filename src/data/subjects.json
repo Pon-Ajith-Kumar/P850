@@ -137,6 +137,14 @@
           ]
         },
         {
+          "id": "aptitude-01-sample",
+          "name": "01 Sample Notes",
+          "description": "Revision notes for 01 Sample.",
+          "images": [
+            "/notes/aptitude/01%20Sample/test-image.jpg"
+          ]
+        },
+        {
           "id": "aptitude-02-clocks",
           "name": "02 Clocks Notes",
           "description": "Revision notes for 02 Clocks.",
