@@ -1,9 +1,9 @@
-import { AlertTriangle, ArrowRight } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Check, Pencil, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SubjectCard from '../components/SubjectCard'
 import subjectsData from '../data/subjects.json'
-import { getRecentMistakes } from '../utils/mistakes'
+import { getRecentMistakes, updateMistake } from '../utils/mistakes'
 import { getContinueStudy } from '../utils/progress'
 
 function Subjects() {
@@ -16,6 +16,9 @@ function Subjects() {
   const recentMistakes = useMemo(() => getRecentMistakes(20), [])
   const [activeMistakeIndex, setActiveMistakeIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState(null)
+  const [editingMistakeId, setEditingMistakeId] = useState(null)
+  const [editingText, setEditingText] = useState('')
+  const [editError, setEditError] = useState('')
 
   const moveMistake = (direction) => {
     if (recentMistakes.length <= 1) return
@@ -55,6 +58,38 @@ function Subjects() {
     }
 
     setTouchStartX(null)
+  }
+
+  const handleOpenEdit = () => {
+    if (!activeMistake) return
+    setEditingMistakeId(activeMistake.id)
+    setEditingText(activeMistake.text)
+    setEditError('')
+  }
+
+  const handleSaveEdit = async (event) => {
+    event.preventDefault()
+    if (!editingMistakeId) return
+
+    try {
+      const updated = await updateMistake(editingMistakeId, {
+        subjectId: activeMistake.subjectId,
+        subjectName: activeMistake.subjectName,
+        text: editingText,
+      })
+
+      if (!updated) {
+        setEditError('Type a mistake before saving.')
+        return
+      }
+
+      setEditingMistakeId(null)
+      setEditingText('')
+      setEditError('')
+      window.location.reload()
+    } catch (saveError) {
+      setEditError(saveError.message || 'Could not update the mistake.')
+    }
   }
 
   const activeMistake = recentMistakes[activeMistakeIndex] || recentMistakes[0]
@@ -114,13 +149,56 @@ function Subjects() {
             onMouseUp={handleSwipeEnd}
           >
             <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              <span>{activeMistake.subjectName}</span>
+              <div className="flex items-center gap-2">
+                <span>{activeMistake.subjectName}</span>
+                <button
+                  type="button"
+                  onClick={handleOpenEdit}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                  aria-label="Edit active mistake"
+                  title="Edit mistake"
+                >
+                  <Pencil size={12} />
+                </button>
+              </div>
               <span>{activeMistakeIndex + 1}/{recentMistakes.length}</span>
             </div>
 
-            <div className="text-sm text-slate-700 transition-all duration-500 dark:text-slate-200">
-              {activeMistake.text}
-            </div>
+            {editingMistakeId === activeMistake.id ? (
+              <form onSubmit={handleSaveEdit} className="space-y-2">
+                <input
+                  value={editingText}
+                  onChange={(event) => setEditingText(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 outline-none transition focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-400"
+                  >
+                    <Check size={12} />
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingMistakeId(null)
+                      setEditingText('')
+                      setEditError('')
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <X size={12} />
+                    Cancel
+                  </button>
+                </div>
+                {editError ? <p className="text-xs text-red-600 dark:text-red-400">{editError}</p> : null}
+              </form>
+            ) : (
+              <div className="text-sm text-slate-700 transition-all duration-500 dark:text-slate-200">
+                {activeMistake.text}
+              </div>
+            )}
           </div>
         </div>
       ) : null}
