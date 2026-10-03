@@ -349,41 +349,10 @@
       "description": "Revision notes for Algorithms.",
       "topics": [
         {
-          "id": "algorithms-01-calendars",
-          "name": "01 Calendars Notes",
-          "description": "Revision notes for 01 Calendars.",
-          "images": [
-            "/notes/algorithms/01%20Calendars/IMG_20260928_033318_1.jpg",
-            "/notes/algorithms/01%20Calendars/IMG_20260928_033328_1.jpg"
-          ]
-        },
-        {
-          "id": "algorithms-02-clocks",
-          "name": "02 Clocks Notes",
-          "description": "Revision notes for 02 Clocks.",
-          "images": [
-            "/notes/algorithms/02%20Clocks/IMG_20260928_033357_1.jpg",
-            "/notes/algorithms/02%20Clocks/IMG_20260928_033404_1.jpg",
-            "/notes/algorithms/02%20Clocks/IMG_20260928_033409_1.jpg"
-          ]
-        },
-        {
-          "id": "algorithms-03-averages-and-percentages",
-          "name": "03 Averages And Percentages Notes",
-          "description": "Revision notes for 03 Averages And Percentages.",
-          "images": [
-            "/notes/algorithms/03%20Averages%20and%20Percentages/IMG_20260928_033421_1.jpg",
-            "/notes/algorithms/03%20Averages%20and%20Percentages/IMG_20260928_033425_1.jpg",
-            "/notes/algorithms/03%20Averages%20and%20Percentages/IMG_20260928_033432.jpg"
-          ]
-        },
-        {
-          "id": "algorithms-04-profit-and-loss",
-          "name": "04 Profit And Loss Notes",
-          "description": "Revision notes for 04 Profit And Loss.",
-          "images": [
-            "/notes/algorithms/04%20Profit%20and%20Loss/IMG_20260928_033455_1.jpg"
-          ]
+          "id": "algorithms-notes",
+          "name": "Algorithms Notes",
+          "description": "Revision notes for Algorithms.",
+          "images": []
         }
       ]
     },
